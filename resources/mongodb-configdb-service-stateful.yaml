@@ -55,6 +55,8 @@ spec:
             - "--bind_ip"
             - "0.0.0.0"
             - "--configsvr"
+            - "--replSet"
+            - "csReplSet"
           resources:
             requests:
               cpu: 50m

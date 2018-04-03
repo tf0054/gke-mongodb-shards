@@ -20,22 +20,27 @@ configDB_SSD_DISK_inGB="5"
 
 # Delete mongos deployment + mongod stateful set + mongodb service + secrets + host vm configurer daemonset
 kubectl delete deployments mongos --namespace=${namespace}
-kubectl delete services mongos-headless-service --namespace=${namespace}
+#kubectl delete services mongos-headless-service --namespace=${namespace}
 
-kubectl delete statefulsets mongodb-shard1 --namespace=${namespace}
+kubectl delete statefulsets mongodb-shard1 --namespace=${namespace} --force --grace-period=0 --cascade=false
 kubectl delete services mongodb-shard1-headless-service --namespace=${namespace}
 
-kubectl delete statefulsets mongodb-shard2 --namespace=${namespace}
+kubectl delete statefulsets mongodb-shard2 --namespace=${namespace} --force --grace-period=0 --cascade=false
 kubectl delete services mongodb-shard2-headless-service --namespace=${namespace}
 
-kubectl delete statefulsets mongodb-configdb  --namespace=${namespace}
+kubectl delete statefulsets mongodb-configdb  --namespace=${namespace} --force --grace-period=0 --cascade=false
 kubectl delete services mongodb-configdb-headless-service --namespace=${namespace}
 sleep 3
 
 # Delete persistent volume claims
-kubectl delete persistentvolumeclaims -l role=mongodb-shard1  --namespace=${namespace}
+kubectl delete persistentvolumeclaims -l role=mongodb-shard1 --namespace=${namespace}
 kubectl delete persistentvolumeclaims -l role=mongodb-shard2 --namespace=${namespace}
 sleep 3
+
+# dont know why but needed
+kubectl delete pod mongodb-configdb-0 --namespace=${namespace}
+kubectl delete pod mongodb-shard1-0 --namespace=${namespace}
+kubectl delete pod mongodb-shard2-0 --namespace=${namespace}
 
 # Delete persistent volumes
 for i in 1 2
@@ -46,7 +51,7 @@ for i in 1
 do
     kubectl delete persistentvolumes data-volume-${diskType}-${configDB_SSD_DISK_inGB}g-${i}
 done
-sleep 20
+sleep 30
 
 # Delete GCE disks
 for i in 1 2

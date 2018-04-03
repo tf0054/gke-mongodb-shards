@@ -34,7 +34,7 @@ spec:
             - "--bind_ip"
             - "0.0.0.0"
             - "--configdb"
-            - "mongodb-configdb-0.mongodb-configdb-headless-service.default.svc.cluster.local:27019"
+            - "csReplSet/mongodb-configdb-0.mongodb-configdb-headless-service.daemonsl.svc.cluster.local:27019"
           resources:
             requests:
               cpu: 50m

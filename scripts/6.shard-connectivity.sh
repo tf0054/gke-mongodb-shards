@@ -21,6 +21,9 @@ kubectl exec --namespace=${namespace} mongodb-shard1-0 -c mongodb-shard1-contain
 echo "Replicaset Init mongodb-shard2-0"
 kubectl exec --namespace=${namespace} mongodb-shard2-0 -c mongodb-shard2-container -- mongo --port 27017 --eval "rs.initiate({_id: \"Shard2\", version: 1, members: [ {_id: 0, host: \"mongodb-shard2-0.mongodb-shard2-headless-service.${namespace}.svc.cluster.local:27017\"} ] });"
 
+echo "Replicaset Init mongodb-configdb-0"
+kubectl exec --namespace=${namespace} mongodb-configdb-0 -c mongodb-configdb-container -- mongo --port 27019 --eval "rs.initiate({_id: \"csReplSet\", version: 1, members: [ {_id: 0, host: \"mongodb-configdb-0.mongodb-configdb-headless-service.daemonsl.svc.cluster.local:27019\"} ] });"
+
 #--------------------------------------------
 
 # Wait for each MongoDB Shard's Replica Set + the ConfigDB Replica Set to each have a primary ready

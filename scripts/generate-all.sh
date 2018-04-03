@@ -111,17 +111,17 @@ echo " (IGNORE any reported not found & connection errors)"
 
 echo -n "  "
 echo "mongodb-configdb-0"
-until kubectl --v=0 exec --namespace=${namespace} mongodb-configdb-0 -c mongodb-configdb-container -- mongo --port 27019 --quiet --eval 'db.getMongo()'; do
+until kubectl --v=0 exec --namespace=${namespace} mongodb-configdb-0 -c mongodb-configdb-container -- mongo --port 27019 --eval 'db.getMongo()'; do
     echo -n "  "
 done
 echo -n "  "
 echo "mongodb-shard1-0"
-until kubectl --v=0 exec --namespace=${namespace} mongodb-shard1-0 -c mongodb-shard1-container -- mongo --port 27019 --quiet --eval 'db.getMongo()'; do
+until kubectl --v=0 exec --namespace=${namespace} mongodb-shard1-0 -c mongodb-shard1-container -- mongo --port 27017 --quiet --eval 'db.getMongo()'; do
     echo -n "  "
 done
 echo -n "  "
 echo "mongodb-shard2-0"
-until kubectl --v=0 exec --namespace=${namespace} mongodb-shard2-0 -c mongodb-shard2-container -- mongo --port 27019 --quiet --eval 'db.getMongo()'; do
+until kubectl --v=0 exec --namespace=${namespace} mongodb-shard2-0 -c mongodb-shard2-container -- mongo --port 27017 --quiet --eval 'db.getMongo()'; do
     echo -n "  "
 done
 echo -n "  "
@@ -135,10 +135,14 @@ echo
 echo "Configuring Shards' Replica Sets"
 
 echo "Replicaset Init mongodb-shard1-0"
-kubectl exec --namespace=${namespace} mongodb-shard1-0 -c mongodb-shard1-container -- mongo --port 27019 --eval "rs.initiate({_id: \"Shard1\", version: 1, members: [ {_id: 0, host: \"mongodb-shard1-0.mongodb-shard1-headless-service.${namespace}.svc.cluster.local:27019\"} ] });"
+kubectl exec --namespace=${namespace} mongodb-shard1-0 -c mongodb-shard1-container -- mongo --port 27017 --eval "rs.initiate({_id: \"Shard1\", version: 1, members: [ {_id: 0, host: \"mongodb-shard1-0.mongodb-shard1-headless-service.${namespace}.svc.cluster.local:27017\"} ] });"
 
 echo "Replicaset Init mongodb-shard2-0"
-kubectl exec --namespace=${namespace} mongodb-shard2-0 -c mongodb-shard2-container -- mongo --port 27019 --eval "rs.initiate({_id: \"Shard2\", version: 1, members: [ {_id: 0, host: \"mongodb-shard2-0.mongodb-shard2-headless-service.${namespace}.svc.cluster.local:27019\"} ] });"
+kubectl exec --namespace=${namespace} mongodb-shard2-0 -c mongodb-shard2-container -- mongo --port 27017 --eval "rs.initiate({_id: \"Shard2\", version: 1, members: [ {_id: 0, host: \"mongodb-shard2-0.mongodb-shard2-headless-service.${namespace}.svc.cluster.local:27017\"} ] });"
+
+echo "Replicaset Init mongodb-configdb-0"
+kubectl exec --namespace=${namespace} mongodb-configdb-0 -c mongodb-configdb-container -- mongo --port 27019 --eval "rs.initiate({_id: \"csReplSet\", version: 1, members: [ {_id: 0, host: \"mongodb-configdb-0.mongodb-configdb-headless-service.daemonsl.svc.cluster.local:27019\"} ] });"
+
 
 #--------------------------------------------
 
@@ -151,10 +155,10 @@ echo "Checking state : mongodb-configdb-0"
 kubectl exec --namespace=${namespace} mongodb-configdb-0 -c mongodb-configdb-container -- mongo --port 27019 --quiet --eval 'while (rs.status().hasOwnProperty("myState") && rs.status().myState != 1) { print("."); sleep(1000); };'
 
 echo "Checking state : mongodb-shard1-0"
-kubectl exec --namespace=${namespace} mongodb-shard1-0 -c mongodb-shard1-container -- mongo --port 27019 --quiet --eval 'while (rs.status().hasOwnProperty("myState") && rs.status().myState != 1) { print("."); sleep(1000); };'
+kubectl exec --namespace=${namespace} mongodb-shard1-0 -c mongodb-shard1-container -- mongo --port 27017 --quiet --eval 'while (rs.status().hasOwnProperty("myState") && rs.status().myState != 1) { print("."); sleep(1000); };'
 
 echo "Checking state : mongodb-shard2-0"
-kubectl exec --namespace=${namespace} mongodb-shard2-0 -c mongodb-shard2-container -- mongo --port 27019 --quiet --eval 'while (rs.status().hasOwnProperty("myState") && rs.status().myState != 1) { print("."); sleep(1000); };'
+kubectl exec --namespace=${namespace} mongodb-shard2-0 -c mongodb-shard2-container -- mongo --port 27017 --quiet --eval 'while (rs.status().hasOwnProperty("myState") && rs.status().myState != 1) { print("."); sleep(1000); };'
 
 sleep 2 # Just a little more sleep to ensure everything is ready!
 echo "...initialisation of the MongoDB Replica Sets completed"
@@ -166,17 +170,12 @@ echo
 echo "Configuring ConfigDB to be aware of the 2 Shards"
 
 echo "Adding Shard 1 : Shard1 "
-kubectl exec --namespace=${namespace} $(kubectl get pod -l "tier=routers" -o jsonpath='{.items[0].metadata.name}' --namespace=${namespace} ) -c mongos-container -- mongo --port 27019 --eval "sh.addShard(\"Shard1/mongodb-shard1-0.mongodb-shard1-headless-service.${namespace}.svc.cluster.local:27019\");"
+kubectl exec --namespace=${namespace} $(kubectl get pod -l "tier=routers" -o jsonpath='{.items[0].metadata.name}' --namespace=${namespace} ) -c mongos-container -- mongo --port 27017 --eval "sh.addShard(\"Shard1/mongodb-shard1-0.mongodb-shard1-headless-service.${namespace}.svc.cluster.local:27017\");"
 
 echo "Adding Shard 2 : Shard2 "
-kubectl exec --namespace=${namespace} $(kubectl get pod -l "tier=routers" -o jsonpath='{.items[0].metadata.name}' --namespace=${namespace} ) -c mongos-container -- mongo --port 27019 --eval "sh.addShard(\"Shard2/mongodb-shard2-0.mongodb-shard2-headless-service.${namespace}.svc.cluster.local:27019\");"
+kubectl exec --namespace=${namespace} $(kubectl get pod -l "tier=routers" -o jsonpath='{.items[0].metadata.name}' --namespace=${namespace} ) -c mongos-container -- mongo --port 27017 --eval "sh.addShard(\"Shard2/mongodb-shard2-0.mongodb-shard2-headless-service.${namespace}.svc.cluster.local:27017\");"
 
 sleep 3
-
-# Add Shards to the Configdb
-echo "Enable Sharding in one database"
-kubectl exec --namespace=${namespace} $(kubectl get pod -l "tier=routers" -o jsonpath='{.items[0].metadata.name}' --namespace=${namespace} ) -c mongos-container -- mongo --port 27019 --eval "sh.enableSharding(\"dbName\" );"
-
 
 # Print Summary State
 kubectl get persistentvolumes --namespace=${namespace}
