@@ -1,101 +1,75 @@
-# Sharded Mongodb in Kubernetes StatefulSets on GKE
+# MongoDB Sharded Cluster Deployment Demo for Kubernetes on GKE
 
-An example project demonstrating the deployment of a MongoDB Sharded Cluster via Kubernetes on the Google Kubernetes Engine (GKE), using Kubernetes' feature StatefulSet. Contains example Kubernetes YAML resource files (in the 'resources' folder) and associated Kubernetes based Bash scripts (in the 'scripts' folder) to configure the environment and deploy a MongoDB Replica Set.
+An example project demonstrating the deployment of a MongoDB Sharded Cluster via Kubernetes on the Google Kubernetes Engine (GKE), using Kubernetes' feature StatefulSet. Contains example Kubernetes YAML resource files (in the 'resource' folder) and associated Kubernetes based Bash scripts (in the 'scripts' folder) to configure the environment and deploy a MongoDB Replica Set.
 
-For further background information on what these scripts and resource files do, plus general information about running MongoDB with Kubernetes.
-
-### Must read below resources in order :
-
-- https://kubernetes.io/docs/concepts/workloads/controllers/statefulset
-- https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
-- https://kubernetes.io/docs/concepts/storage/storage-classes/#gce
-- https://kubernetes.io/docs/concepts/storage/persistent-volumes/
-- http://blog.kubernetes.io/2017/03/dynamic-provisioning-and-storage-classes-kubernetes.html
-- http://blog.kubernetes.io/2017/03/advanced-scheduling-in-kubernetes.html
+For further background information on what these scripts and resource files do, plus general information about running MongoDB with Kubernetes, see: [http://k8smongodb.net/](http://k8smongodb.net/)
 
 
 ## 1 How To Run
 
 ### 1.1 Prerequisites
 
-Ensure the following dependencies are already fulfilled on your host Linux system:
+Ensure the following dependencies are already fulfilled on your host Linux/Windows/Mac Workstation/Laptop:
 
-GCP’s client command line tool [gcloud](https://cloud.google.com/sdk/docs/quickstarts) has been installed on your local workstation.
+1. An account has been registered with the Google Compute Platform (GCP). You can sign up to a [free trial](https://cloud.google.com/free/) for GCP. Note: The free trial places some restrictions on account resource quotas, in particular restricting storage to a maximum of 100GB.
+2. GCP’s client command line tool [gcloud](https://cloud.google.com/sdk/docs/quickstarts) has been installed on your local workstation. 
+3. Your local workstation has been initialised to: (1) use your GCP account, (2) install the Kubernetes command tool (“kubectl”), (3) configure authentication credentials, and (4) set the default GCP zone to be deployed to:
 
-Your local workstation has been initialised to:
-    
-1. gcloud authentication to a project to manage container engine.
-2. Install the Kubernetes command tool (“kubectl”),
-3. Configure authentication credentials,
-4. Docker needs to be installed to build an image 
+    ```
+    $ gcloud init
+    $ gcloud components install kubectl
+    $ gcloud auth application-default login
+    $ gcloud config set compute/zone europe-west1-b
+    ```
 
+**Note:** To specify an alternative zone to deploy to, in the above command, you can first view the list of available zones by running the command: `$ gcloud compute zones list`
 
 ### 1.2 Deployment
 
-#### Configure scripts before running
-
-```
-#Give your name as kubernetes namespace where you want to deploy
-namespace='daemonsl'
-
-diskType="k8s-mongodb-"$namespace
-
-# KEEP Config DB size (10-25 GB) very less than Main DB
-# Main DB Servers DISK
-mainDB_SSD_DISK_inGB="10"
-
-# Config Server DISK
-configDB_SSD_DISK_inGB="5"
-```
-
-After configuring you can proceed to run all scripts.
-
-Using a command-line terminal/shell, execute the following
+Using a command-line terminal/shell, execute the following (first change the password variable in the script "generate.sh", if appropriate):
 
     $ cd scripts
-    $ ./generate-all.sh #to run all 1-7 script combined.
+    $ ./generate.sh
+    
+This takes a few minutes to complete. Once completed, you should have a MongoDB Sharded Cluster initialised, secured and running in some Kubernetes StatefulSets. The executed bash script will have created the following resources:
 
-        OR configure each scripts one by one but configure above configuration in each shell script and run each script one-by-one.
-    $ sh `1 to 7 scripts one-by-one`.sh
-
-### Scripts Working
-
-1. pd-ssd-create-disks-persistent-vol-creation.sh  #script to create disk to be used by mongodb-replica server and mongo-config database and to create PersistentVolume to reserve disk in retain policy.
-2. mongo-config-deploy.sh  #deploy a stateful container, headless-service and register a persistent-volumes-claim to claim disk declared by persistent-volumes.
-3. mongo-shard-deploy.sh   #deploy a two shard each in stateful container, headless-service and register a persistent-volumes-claim to claim disk declared by persistent-volumes.
-4. mongos-deploy.sh    #deploy mongos as deployment and headless-service to allow all pods for inter-communication.
-5. check-pod-status.sh     #to check all pods are up and alive.
-6. shard-connectivity.sh   #to configure mongodb-maindb servers to initiate replicasets and configure mongos to enable sharding.
-
-This takes a few minutes to complete. Once completed, you should have a MongoDB Sharded Cluster initialised and running in some Kubernetes StatefulSets/Deployments. The executed bash script will have created the following resources:
-
-* 1x Config Server  (k8s deployment type: "StatefulSet")
-* 2x Shards with each Shard being a Replica Set containing 1x replicas (k8s deployment type: "StatefulSet")
-* 2x Mongos Routers (k8s deployment type: "Deployment")
+* 1x Config Server Replica Set containing 3x replicas (k8s deployment type: "StatefulSet")
+* 3x Shards with each Shard being a Replica Set containing 3x replicas (k8s deployment type: "StatefulSet")
+* 2x Mongos Routers (k8s deployment type: "StatefulSet")
 
 You can view the list of Pods that contain these MongoDB resources, by running the following:
 
-    $ kubectl get pods --namespace=NAMESPACE_ID
-
+    $ kubectl get pods
+    
 You can also view the the state of the deployed environment via the [Google Cloud Platform Console](https://console.cloud.google.com) (look at both the “Kubernetes Engine” and the “Compute Engine” sections of the Console).
+
+The running mongos routers will be accessible to any "app tier" containers, that are running in the same Kubernetes cluster, via the following hostnames and ports (remember to also specify the username and password, when connecting to the database):
+
+    mongos-router-0.mongos-router-service.default.svc.cluster.local:27017
+    mongos-router-1.mongos-router-service.default.svc.cluster.local:27017
 
 ### 1.3 Test Sharding Your Own Collection
 
 To test that the sharded cluster is working properly, connect to the container running the first "mongos" router, then use the Mongo Shell to authenticate, enable sharding on a specific collection, add some test data to this collection and then view the status of the Sharded cluster and collection:
 
-    $ kubectl exec -it $(kubectl get pod -l "tier=routers" -o jsonpath='{.items[0].metadata.name}') -c mongos-container bash
+    $ kubectl exec -it mongos-router-0 -c mongos-container bash
     $ mongo
-    > sh.enableSharding("dbName");
+    > db.getSiblingDB('admin').auth("main_admin", "abc123");
+    > sh.enableSharding("test");
+    > sh.shardCollection("test.testcoll", {"myfield": 1});
+    > use test;
+    > db.testcoll.insert({"myfield": "a", "otherfield": "b"});
+    > db.testcoll.find();
     > sh.status();
 
 ### 1.4 Undeploying & Cleaning Down the Kubernetes Environment
 
 **Important:** This step is required to ensure you aren't continuously charged by Google Cloud for an environment you no longer need.
 
-Run the following script to undeploy the MongoDB Services & StatefulSets/Deployments plus related Kubernetes resources, followed by the removal of the GCE disks. This script is available in repository.
+Run the following script to undeploy the MongoDB Services & StatefulSets plus related Kubernetes resources, followed by the removal of the GCE disks before finally deleting the GKE Kubernetes cluster.
 
-    $ sh teardown.sh   #To delete all resources provisioned above
-
+    $ ./teardown.sh
+    
 It is also worth checking in the [Google Cloud Platform Console](https://console.cloud.google.com), to ensure all resources have been removed correctly.
 
 
@@ -104,6 +78,11 @@ It is also worth checking in the [Google Cloud Platform Console](https://console
 * Deployment of a MongoDB on the Google Kubernetes Engine
 * Use of Kubernetes StatefulSets and PersistentVolumeClaims to ensure data is not lost when containers are recycled
 * Proper configuration of a MongoDB Sharded Cluster for Scalability with each Shard being a Replica Set for full resiliency
+* Securing MongoDB by default for new deployments
+* Leveraging XFS filesystem for data file storage to improve performance
+* Disabling Transparent Huge Pages to improve performance
+* Disabling NUMA to improve performance
+* Controlling CPU & RAM Resource Allocation
+* Correctly configuring WiredTiger Cache Size in containers
 * Controlling Anti-Affinity for Mongod Replicas to avoid a Single Point of Failure
 
-**Credit :** This repo is based on workdone by [Paul Done](https://twitter.com/TheDonester)
