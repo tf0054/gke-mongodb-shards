@@ -3,9 +3,6 @@
 # Script to deploy a Kubernetes project with a StatefulSet running a MongoDB Sharded Cluster, to GKE.
 ##
 
-NEW_PASSWORD="abc123"
-
-
 # Create new GKE Kubernetes cluster (using host node VM images based on Ubuntu
 # rather than default ChromiumOS & also use slightly larger VMs than default)
 echo "Creating GKE Cluster"
@@ -151,13 +148,6 @@ kubectl exec mongos-router-0 -c mongos-container -- mongo --eval 'sh.addShard("S
 kubectl exec mongos-router-0 -c mongos-container -- mongo --eval 'sh.addShard("Shard2RepSet/mongod-shard2-0.mongodb-shard2-service.default.svc.cluster.local:27017");'
 kubectl exec mongos-router-0 -c mongos-container -- mongo --eval 'sh.addShard("Shard3RepSet/mongod-shard3-0.mongodb-shard3-service.default.svc.cluster.local:27017");'
 sleep 3
-
-
-# Create the Admin User (this will automatically disable the localhost exception)
-echo "Creating user: 'main_admin'"
-kubectl exec mongos-router-0 -c mongos-container -- mongo --eval 'db.getSiblingDB("admin").createUser({user:"main_admin",pwd:"'"${NEW_PASSWORD}"'",roles:[{role:"root",db:"admin"}]});'
-echo
-
 
 # Print Summary State
 kubectl get persistentvolumes
