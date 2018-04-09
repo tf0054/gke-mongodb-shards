@@ -18,7 +18,7 @@ metadata:
   name: mongod-shardX
 spec:
   serviceName: mongodb-shardX-service
-  replicas: 3
+  replicas: 4
   template:
     metadata:
       labels:

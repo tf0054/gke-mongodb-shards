@@ -18,7 +18,7 @@ metadata:
   name: mongod-configdb
 spec:
   serviceName: mongodb-configdb-service
-  replicas: 3
+  replicas: 1
   template:
     metadata:
       labels:
