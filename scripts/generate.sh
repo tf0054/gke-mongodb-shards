@@ -6,7 +6,7 @@
 # Create new GKE Kubernetes cluster (using host node VM images based on Ubuntu
 # rather than default ChromiumOS & also use slightly larger VMs than default)
 echo "Creating GKE Cluster"
-gcloud container clusters create "gke-mongodb-demo-cluster" --image-type=UBUNTU --machine-type=n1-standard-2 --num-nodes=5
+gcloud container clusters create "gke-mongodb-demo-cluster" --image-type=UBUNTU --machine-type=n1-standard-4 --num-nodes=8
 
 
 # Configure host VM using daemonset to disable hugepages
@@ -22,12 +22,12 @@ kubectl apply -f ../resources/hostvm-node-configurer-daemonset.yaml
 
 # Register GCE Fast SSD persistent disks and then create the persistent disks 
 echo "Creating GCE disks"
-for i in 1 2 3
+for i in 1
 do
     # 4GB disks    
     gcloud compute disks create --size 4GB --type pd-ssd pd-ssd-disk-4g-$i
 done
-for i in 1 2 3 4 5 6 7 8 9
+for i in `seq 1 6`;
 do
     # 8 GB disks
     gcloud compute disks create --size 8GB --type pd-ssd pd-ssd-disk-8g-$i
@@ -37,13 +37,13 @@ sleep 3
 
 # Create persistent volumes using disks that were created above
 echo "Creating GKE Persistent Volumes"
-for i in 1 2 3
+for i in 1
 do
     # Replace text stating volume number + size of disk (set to 4)
     sed -e "s/INST/${i}/g; s/SIZE/4/g" ../resources/xfs-gce-ssd-persistentvolume.yaml > /tmp/xfs-gce-ssd-persistentvolume.yaml
     kubectl apply -f /tmp/xfs-gce-ssd-persistentvolume.yaml
 done
-for i in 1 2 3 4 5 6 7 8 9
+for i in `seq 1 6`;
 do
     # Replace text stating volume number + size of disk (set to 8)
     sed -e "s/INST/${i}/g; s/SIZE/8/g" ../resources/xfs-gce-ssd-persistentvolume.yaml > /tmp/xfs-gce-ssd-persistentvolume.yaml
@@ -96,7 +96,28 @@ until kubectl --v=0 exec mongod-shard1-0 -c mongod-shard1-container -- mongo --q
     sleep 5
     echo -n "  "
 done
-echo -n "  "
+until kubectl --v=0 exec mongod-shard1-1 -c mongod-shard1-container -- mongo --quiet --eval 'db.getMongo()'; do
+    sleep 5
+    echo -n "  "
+done
+until kubectl --v=0 exec mongod-shard1-2 -c mongod-shard1-container -- mongo --quiet --eval 'db.getMongo()'; do
+    sleep 5
+    echo -n "  "
+done
+until kubectl --v=0 exec mongod-shard1-3 -c mongod-shard1-container -- mongo --quiet --eval 'db.getMongo()'; do
+    sleep 5
+    echo -n "  "
+done
+until kubectl --v=0 exec mongod-shard1-4 -c mongod-shard1-container -- mongo --quiet --eval 'db.getMongo()'; do
+    sleep 5
+    echo -n "  "
+done
+until kubectl --v=0 exec mongod-shard1-5 -c mongod-shard1-container -- mongo --quiet --eval 'db.getMongo()'; do
+    sleep 5
+    echo -n "  "
+done
+
+#echo -n "  "
 #until kubectl --v=0 exec mongod-shard2-0 -c mongod-shard2-container -- mongo --quiet --eval 'db.getMongo()'; do
 #    sleep 5
 #    echo -n "  "
@@ -113,7 +134,7 @@ echo
 # Initialise the Config Server Replica Set and each Shard Replica Set
 echo "Configuring Config Server's & each Shard's Replica Sets"
 kubectl exec mongod-configdb-0 -c mongod-configdb-container -- mongo --eval 'rs.initiate({_id: "ConfigDBRepSet", version: 1, members: [ {_id: 0, host: "mongod-configdb-0.mongodb-configdb-service.default.svc.cluster.local:27017"} ]});'
-kubectl exec mongod-shard1-0 -c mongod-shard1-container -- mongo --eval 'rs.initiate({_id: "Shard1RepSet", version: 1, members: [ {_id: 0, host: "mongod-shard1-0.mongodb-shard1-service.default.svc.cluster.local:27017"}, {_id: 1, host: "mongod-shard1-1.mongodb-shard1-service.default.svc.cluster.local:27017"}, {_id: 2, host: "mongod-shard1-2.mongodb-shard1-service.default.svc.cluster.local:27017"}, {_id: 3, host: "mongod-shard1-3.mongodb-shard1-service.default.svc.cluster.local:27017"} ]});'
+kubectl exec mongod-shard1-0 -c mongod-shard1-container -- mongo --eval 'rs.initiate({_id: "Shard1RepSet", version: 1, members: [ {_id: 0, host: "mongod-shard1-0.mongodb-shard1-service.default.svc.cluster.local:27017"}, {_id: 1, host: "mongod-shard1-1.mongodb-shard1-service.default.svc.cluster.local:27017"}, {_id: 2, host: "mongod-shard1-2.mongodb-shard1-service.default.svc.cluster.local:27017"}, {_id: 3, host: "mongod-shard1-3.mongodb-shard1-service.default.svc.cluster.local:27017"},{_id: 4, host: "mongod-shard1-4.mongodb-shard1-service.default.svc.cluster.local:27017"},{_id: 5, host: "mongod-shard1-5.mongodb-shard1-service.default.svc.cluster.local:27017"} ]});'
 #kubectl exec mongod-shard2-0 -c mongod-shard2-container -- mongo --eval 'rs.initiate({_id: "Shard2RepSet", version: 1, members: [ {_id: 0, host: "mongod-shard2-0.mongodb-shard2-service.default.svc.cluster.local:27017"}, {_id: 1, host: "mongod-shard2-1.mongodb-shard2-service.default.svc.cluster.local:27017"} ]});'
 #kubectl exec mongod-shard3-0 -c mongod-shard3-container -- mongo --eval 'rs.initiate({_id: "Shard3RepSet", version: 1, members: [ {_id: 0, host: "mongod-shard3-0.mongodb-shard3-service.default.svc.cluster.local:27017"}, {_id: 1, host: "mongod-shard3-1.mongodb-shard3-service.default.svc.cluster.local:27017"} ]});'
 echo
@@ -148,6 +169,10 @@ kubectl exec mongos-router-0 -c mongos-container -- mongo --eval 'sh.addShard("S
 #kubectl exec mongos-router-0 -c mongos-container -- mongo --eval 'sh.addShard("Shard2RepSet/mongod-shard2-0.mongodb-shard2-service.default.svc.cluster.local:27017");'
 #kubectl exec mongos-router-0 -c mongos-container -- mongo --eval 'sh.addShard("Shard3RepSet/mongod-shard3-0.mongodb-shard3-service.default.svc.cluster.local:27017");'
 sleep 3
+
+#
+kubectl exec mongos-router-0 -c mongos-container -- mongo admin --eval "printjson(db.runCommand( { enablesharding : 'analysis' } ));"
+kubectl exec mongos-router-0 -c mongos-container -- mongo admin --eval 'sh.shardCollection("analysis.hashsignatures", {hashSignature: 1})'
 
 # Print Summary State
 kubectl get persistentvolumes
