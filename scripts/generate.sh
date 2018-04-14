@@ -13,6 +13,7 @@ gcloud alpha container clusters create "audio-analyzer-mongodb-cluster" --image-
   --enable-kubernetes-alpha \
   --local-ssd-count=1 \
   --cluster-version="1.9.6-gke.0" \
+  --no-enable-autorepair \
   --num-nodes=8
 
 # Configure host VM using daemonset to disable hugepages
@@ -200,7 +201,7 @@ sleep 3
 
 #
 kubectl exec mongos-router-0 -c mongos-container -- mongo admin --eval "printjson(db.runCommand( { enablesharding : 'analysis' } ));"
-kubectl exec mongos-router-0 -c mongos-container -- mongo admin --eval 'sh.shardCollection("analysis.hashsignatures", {hashSignature: "hashed"})'
+kubectl exec mongos-router-0 -c mongos-container -- mongo admin --eval 'sh.shardCollection("analysis.hashsignatures", {subFingerprintId: "hashed"})'
 
 # Print Summary State
 kubectl get persistentvolumes
