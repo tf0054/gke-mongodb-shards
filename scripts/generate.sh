@@ -7,14 +7,14 @@ MONGO_NUM=6
 
 # Create new GKE Kubernetes cluster (using host node VM images based on Ubuntu
 # rather than default ChromiumOS & also use slightly larger VMs than default)
-echo "Creating GKE Cluster"
-gcloud alpha container clusters create "audio-analyzer-mongodb-cluster" --image-type=ubuntu \
-  --machine-type=n1-standard-4 \
-  --enable-kubernetes-alpha \
-  --local-ssd-count=1 \
-  --cluster-version="1.9.6-gke.0" \
-  --no-enable-autorepair \
-  --num-nodes=8
+#echo "Creating GKE Cluster"
+#gcloud alpha container clusters create "audio-analyzer-mongodb-clusterw2" --image-type=cos \
+#  --machine-type=n1-standard-4 \
+#  --enable-kubernetes-alpha \
+#  --local-ssd-count 1 \
+#  --cluster-version="1.9.6-gke.0" \
+#  --no-enable-autorepair \
+#  --num-nodes=8
 
 # Configure host VM using daemonset to disable hugepages
 echo "Deploying GKE Daemon Set"
@@ -28,12 +28,12 @@ kubectl apply -f ../resources/hostvm-node-configurer-daemonset.yaml
 
 
 # Register GCE Fast SSD persistent disks and then create the persistent disks 
-echo "Creating GCE disks"
-for i in 1
-do
-    # 4GB disks    
-    gcloud compute disks create --size 4GB --type pd-ssd pd-ssd-disk-4g-$i
-done
+#echo "Creating GCE disks"
+#for i in 1
+#do
+#    # 4GB disks    
+#    gcloud compute disks create --size 4GB --type pd-ssd pd-ssd-disk-4g-$i
+#done
 #for i in `seq 1 $MONGO_NUM`;
 #do
 #    # 8 GB disks
@@ -43,13 +43,13 @@ done
 
 
 # Create persistent volumes using disks that were created above
-echo "Creating GKE Persistent Volumes"
-for i in 1
-do
-    # Replace text stating volume number + size of disk (set to 4)
-    sed -e "s/INST/${i}/g; s/SIZE/4/g" ../resources/xfs-gce-ssd-persistentvolume.yaml > /tmp/xfs-gce-ssd-persistentvolume.yaml
-    kubectl apply -f /tmp/xfs-gce-ssd-persistentvolume.yaml
-done
+#echo "Creating GKE Persistent Volumes"
+#for i in 1
+#do
+#    # Replace text stating volume number + size of disk (set to 4)
+#    sed -e "s/INST/${i}/g; s/SIZE/4/g" ../resources/xfs-gce-ssd-persistentvolume.yaml > /tmp/xfs-gce-ssd-persistentvolume.yaml
+#    kubectl apply -f /tmp/xfs-gce-ssd-persistentvolume.yaml
+#done
 #for i in `seq 1 $MONGO_NUM`;
 #do
 #    # Replace text stating volume number + size of disk (set to 8)
@@ -140,15 +140,13 @@ echo "Configuring Config Server's & each Shard's Replica Sets"
 
 kubectl exec mongod-configdb-0 -c mongod-configdb-container -- mongo --eval 'rs.initiate({_id: "ConfigDBRepSet", version: 1, members: [ {_id: 0, host: "mongod-configdb-0.mongodb-configdb-service.default.svc.cluster.local:27017"} ]});'
 
-SHARD_LINES="[ "
-for i in `seq 1 $TMP_MAX`;
-do
-  SHARD_LINES=$SHARD_LINES"{_id: $i, host: \"mongod-shard1-$i.mongodb-shard1-service.default.svc.cluster.local:27017\"}, "
-done
-SHARD_LINES=$SHARD_LINES"{_id: 0, host: \"mongod-shard1-0.mongodb-shard1-service.default.svc.cluster.local:27017\"} ]"
-
-echo $SHARD_LINES
-
+#SHARD_LINES="[ "
+#for i in `seq 1 $TMP_MAX`;
+#do
+#  SHARD_LINES=$SHARD_LINES"{_id: $i, host: \"mongod-shard1-$i.mongodb-shard1-service.default.svc.cluster.local:27017\"}, "
+#done
+#SHARD_LINES=$SHARD_LINES"{_id: 0, host: \"mongod-shard1-0.mongodb-shard1-service.default.svc.cluster.local:27017\"} ]"
+#echo $SHARD_LINES
 
 for i in `seq 1 $MONGO_NUM`;
 do

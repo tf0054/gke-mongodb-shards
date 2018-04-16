@@ -31,21 +31,21 @@ kubectl delete persistentvolumeclaims -l tier=configdb
 sleep 3
 
 # Delete persistent volumes
-for i in 1
-do
-    kubectl delete persistentvolumes data-volume-4g-$i
-done
+#for i in 1
+#do
+#    kubectl delete persistentvolumes data-volume-4g-$i
+#done
 #for i in `seq 1 $MONGO_NUM`;
 #do
 #    kubectl delete persistentvolumes data-volume-8g-$i
 #done
-sleep 20
+#sleep 20
 
 # Delete GCE disks
-for i in 1
-do
-    gcloud -q compute disks delete pd-ssd-disk-4g-$i
-done
+#for i in 1
+#do
+#    gcloud -q compute disks delete pd-ssd-disk-4g-$i
+#done
 #for i in `seq 1 $MONGO_NUM`;
 #do
 #    gcloud -q compute disks delete pd-ssd-disk-8g-$i

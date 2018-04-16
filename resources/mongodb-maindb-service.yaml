@@ -40,7 +40,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       terminationGracePeriodSeconds: 10
       volumes:
-        - name: "test-ssd"
+        - name: "mongodb-ssd"
           hostPath:
             path: "/mnt/disks/ssd0"
       nodeSelector:
@@ -69,5 +69,5 @@ spec:
             - containerPort: 27017
           volumeMounts:
             - mountPath: "/data/db"
-              name: "test-ssd"
+              name: "mongodb-ssd"
 

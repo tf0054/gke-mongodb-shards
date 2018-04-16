@@ -44,6 +44,11 @@ spec:
           secret:
             secretName: shared-bootstrap-data
             defaultMode: 256
+        - name: "mongodb-cfg-ssd"
+          hostPath:
+            path: "/mnt/disks/ssd0"
+      nodeSelector:
+        cloud.google.com/gke-local-ssd: "true"
       containers:
         - name: mongod-configdb-container
           image: mongo
@@ -70,15 +75,5 @@ spec:
             - name: secrets-volume
               readOnly: true
               mountPath: /etc/secrets-volume
-            - name: mongo-configdb-persistent-storage-claim
-              mountPath: /data/db
-  volumeClaimTemplates:
-  - metadata:
-      name: mongo-configdb-persistent-storage-claim
-      annotations:
-        volume.beta.kubernetes.io/storage-class: "fast"
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 4Gi
+            - mountPath: "/data/db"
+              name: "mongodb-cfg-ssd"
