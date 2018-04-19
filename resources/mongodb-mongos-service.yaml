@@ -17,7 +17,7 @@ metadata:
   name: mongos-router
 spec:
   serviceName: mongos-router-service
-  replicas: 3
+  replicas: 1
   template:
     metadata:
       labels:
